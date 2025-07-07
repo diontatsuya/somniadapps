@@ -6,13 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 const tokenAIcon = "/gold.png";
 const tokenBIcon = "/gem.png";
 
-const TOKEN_A = {
+const GOLD = {
   name: "GOLD",
   address: "0x7e86277abbedac497e23d7abf43913833fb7ba2e",
   icon: tokenAIcon,
 };
 
-const TOKEN_B = {
+const GEM = {
   name: "GEM",
   address: "0x73f75ac5400f48bad2bff033eae4248cfef9b499",
   icon: tokenBIcon,
@@ -35,8 +35,12 @@ export default function App() {
   const [wallet, setWallet] = useState(null);
   const [provider, setProvider] = useState(null);
   const [amount, setAmount] = useState("");
-  const [goldBalance, setGoldBalance] = useState("0");
-  const [gemBalance, setGemBalance] = useState("0");
+  const [tokenFrom, setTokenFrom] = useState(GOLD);
+  const [tokenTo, setTokenTo] = useState(GEM);
+  const [balanceFrom, setBalanceFrom] = useState("0");
+  const [balanceTo, setBalanceTo] = useState("0");
+  const [txHash, setTxHash] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const connectWallet = async () => {
     if (window.ethereum) {
@@ -51,53 +55,91 @@ export default function App() {
   const disconnect = () => {
     setWallet(null);
     setProvider(null);
+    setTxHash(null);
   };
 
   const handleSwap = async () => {
     if (!provider || !wallet) return;
-    const signer = await provider.getSigner();
-    const tokenA = new ethers.Contract(TOKEN_A.address, TOKEN_ABI, signer);
-    const swapContract = new ethers.Contract(SWAP_CONTRACT, SWAP_ABI, signer);
+    setLoading(true);
+    setTxHash(null);
+    try {
+      const signer = await provider.getSigner();
+      const token = new ethers.Contract(tokenFrom.address, TOKEN_ABI, signer);
+      const swapContract = new ethers.Contract(SWAP_CONTRACT, SWAP_ABI, signer);
+      const amountInWei = ethers.parseUnits(amount, 18);
 
-    const amountInWei = ethers.parseUnits(amount, 18);
-    const allowance = await tokenA.allowance(wallet, SWAP_CONTRACT);
+      const allowance = await token.allowance(wallet, SWAP_CONTRACT);
+      if (allowance < amountInWei) {
+        const txApprove = await token.approve(SWAP_CONTRACT, amountInWei);
+        await txApprove.wait();
+      }
 
-    if (allowance < amountInWei) {
-      const txApprove = await tokenA.approve(SWAP_CONTRACT, amountInWei);
-      await txApprove.wait();
+      const tx = await swapContract.swap(tokenFrom.address, tokenTo.address, amountInWei);
+      const receipt = await tx.wait();
+      setTxHash(receipt.hash);
+      alert("✅ Swap berhasil!");
+    } catch (e) {
+      alert("❌ Gagal melakukan swap: " + e.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const tx = await swapContract.swap(TOKEN_A.address, TOKEN_B.address, amountInWei);
-    await tx.wait();
-    alert("✅ Swap berhasil!");
+  const switchTokens = () => {
+    const from = tokenFrom;
+    setTokenFrom(tokenTo);
+    setTokenTo(from);
+    setAmount("");
+    setTxHash(null);
+  };
+
+  const addTokenToWallet = async (token) => {
+    try {
+      const wasAdded = await window.ethereum.request({
+        method: "wallet_watchAsset",
+        params: {
+          type: "ERC20",
+          options: {
+            address: token.address,
+            symbol: token.name,
+            decimals: 18,
+            image: window.location.origin + token.icon,
+          },
+        },
+      });
+      if (wasAdded) {
+        alert(`✅ ${token.name} berhasil ditambahkan ke wallet!`);
+      } else {
+        alert(`❌ Gagal menambahkan ${token.name}.`);
+      }
+    } catch (error) {
+      alert(`⚠️ Error: ${error.message}`);
+    }
   };
 
   useEffect(() => {
     if (wallet && provider) {
       const loadBalances = async () => {
-        const tokenA = new ethers.Contract(TOKEN_A.address, TOKEN_ABI, provider);
-        const tokenB = new ethers.Contract(TOKEN_B.address, TOKEN_ABI, provider);
-
-        const balanceA = await tokenA.balanceOf(wallet);
-        const balanceB = await tokenB.balanceOf(wallet);
-
-        setGoldBalance(ethers.formatUnits(balanceA, 18));
-        setGemBalance(ethers.formatUnits(balanceB, 18));
+        const fromToken = new ethers.Contract(tokenFrom.address, TOKEN_ABI, provider);
+        const toToken = new ethers.Contract(tokenTo.address, TOKEN_ABI, provider);
+        const fromBal = await fromToken.balanceOf(wallet);
+        const toBal = await toToken.balanceOf(wallet);
+        setBalanceFrom(ethers.formatUnits(fromBal, 18));
+        setBalanceTo(ethers.formatUnits(toBal, 18));
       };
-
       loadBalances();
     }
-  }, [wallet, provider]);
+  }, [wallet, provider, tokenFrom, tokenTo]);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md w-full shadow-2xl">
         <CardContent className="p-6 space-y-4">
-          <h1 className="text-xl font-bold text-center">🌐 Somnia Swap</h1>
+          <h1 className="text-xl font-bold text-center">🔁 Somnia Token Swap</h1>
 
           {wallet && (
             <div className="text-xs text-gray-500 text-center">
-              GOLD: {parseFloat(goldBalance).toFixed(4)} | GEM: {parseFloat(gemBalance).toFixed(4)}
+              {tokenFrom.name}: {parseFloat(balanceFrom).toFixed(4)} | {tokenTo.name}: {parseFloat(balanceTo).toFixed(4)}
             </div>
           )}
 
@@ -114,31 +156,48 @@ export default function App() {
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <img src={TOKEN_A.icon} alt="GOLD" className="w-6 h-6" />
+                  <img src={tokenFrom.icon} alt={tokenFrom.name} className="w-6 h-6" />
                   <input
                     type="number"
                     className="w-full border rounded px-2 py-1"
-                    placeholder="Amount in GOLD"
+                    placeholder={`Amount in ${tokenFrom.name}`}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                   />
                 </div>
-                <div className="text-center">🔄</div>
+                <div className="text-center">
+                  <Button size="sm" variant="secondary" onClick={switchTokens}>⇅ Switch</Button>
+                </div>
                 <div className="flex items-center gap-2">
-                  <img src={TOKEN_B.icon} alt="GEM" className="w-6 h-6" />
+                  <img src={tokenTo.icon} alt={tokenTo.name} className="w-6 h-6" />
                   <input
                     type="number"
                     className="w-full border rounded px-2 py-1 bg-gray-100"
-                    placeholder="Estimated GEM"
+                    placeholder={`Estimated ${tokenTo.name}`}
                     value={amount}
                     disabled
                   />
                 </div>
               </div>
 
-              <Button className="w-full mt-4" onClick={handleSwap} disabled={!amount}>
-                Swap
+              <Button className="w-full mt-4" onClick={handleSwap} disabled={!amount || loading}>
+                {loading ? "Swapping..." : "Swap"}
               </Button>
+
+              {txHash && (
+                <div className="text-xs text-center mt-2 text-blue-600">
+                  TX Hash: <a href={`https://shannon-explorer.somnia.network/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline">{txHash.slice(0, 10)}...</a>
+                </div>
+              )}
+
+              <div className="flex justify-between gap-2">
+                <Button variant="outline" onClick={() => addTokenToWallet(tokenFrom)} className="w-full text-xs">
+                  + {tokenFrom.name} ke Wallet
+                </Button>
+                <Button variant="outline" onClick={() => addTokenToWallet(tokenTo)} className="w-full text-xs">
+                  + {tokenTo.name} ke Wallet
+                </Button>
+              </div>
             </>
           )}
         </CardContent>

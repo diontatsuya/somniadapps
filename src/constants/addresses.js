@@ -1,31 +1,24 @@
-// Token addresses for Somnia testnet
-export const STT = {
-  address: "0x841b9fcB0c9E19Ba7eE387E9F011fe79D860d73A",
-  name: "Somnia Test Token",
-  symbol: "STT",
-  icon: "/stt.png",
-};
+// src/constants/addresses.js
 
-export const GOLD = {
-  address: "0x74aF64F387c3d62b47417384392B3f84A482Ce04",
-  name: "Gold Token",
-  symbol: "GOLD",
-  icon: "/gold.png",
-};
+export const SWAP_CONTRACT = "0x63a04beb918655679123c2dc1f43d142da5c7fea";
 
-export const GEM = {
-  address: "0x84E23A21563A5189262264742ad9c395AD3E95Ae",
-  name: "Gem Token",
-  symbol: "GEM",
-  icon: "/gem.png",
-};
-
-// All available tokens
-export const TOKENS = [STT, GOLD, GEM];
-
-// Default tokens for swap
-export const TOKEN_A = GOLD;
-export const TOKEN_B = GEM;
-
-// Universal Token Swap contract address
-export const SWAP_CONTRACT = "0x0c733a6cd30714e92fdfac5ef154a9c9eab5a7d2";
+export const TOKENS = [
+  {
+    name: "Gold Token",
+    symbol: "GOLD",
+    address: "0x7e86277abbedac497e23d7abf43913833fb7ba2e",
+    icon: "/gold.png",
+  },
+  {
+    name: "Gem Token",
+    symbol: "GEM",
+    address: "0x73f75ac5400f48bad2bff033eae4248cfef9b499",
+    icon: "/gem.png",
+  },
+  {
+    name: "Somnia Test Token",
+    symbol: "STT",
+    address: "0x841b9fcB0c9E19Ba7eE387E9F011fe79D860d73A",
+    icon: "/stt.png",
+  }
+];

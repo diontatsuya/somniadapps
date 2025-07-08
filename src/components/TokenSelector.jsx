@@ -1,9 +1,8 @@
-// src/components/TokenSelector.jsx
 import { TOKENS } from "../constants/addresses";
 
 export default function TokenSelector({ label, token, onChange }) {
   return (
-    <div>
+    <div className="z-10 relative">
       <label className="block mb-1 font-medium">{label}</label>
       <select
         value={token.address}
@@ -11,7 +10,7 @@ export default function TokenSelector({ label, token, onChange }) {
           const selected = TOKENS.find((t) => t.address === e.target.value);
           onChange(selected);
         }}
-        className="w-full border p-2 rounded"
+        className="w-full border p-2 rounded bg-white text-black"
       >
         {TOKENS.map((t) => (
           <option key={t.address} value={t.address}>

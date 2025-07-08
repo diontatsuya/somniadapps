@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "ethers": "^6.6.2",
-    "@privy-io/react-auth": "^0.14.1",
+    "@privy-io/react-auth": "^0.13.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

@@ -83,6 +83,26 @@ export default function App() {
     }
   };
 
+  const addTokenToWallet = async (token) => {
+    if (!window.ethereum) return;
+    try {
+      await window.ethereum.request({
+        method: "wallet_watchAsset",
+        params: {
+          type: "ERC20",
+          options: {
+            address: token.address,
+            symbol: token.name,
+            decimals: 18,
+            image: window.location.origin + token.icon,
+          },
+        },
+      });
+    } catch (err) {
+      console.error("Add token failed:", err);
+    }
+  };
+
   useEffect(() => {
     getEstimate();
   }, [amount, tokenIn, tokenOut]);
@@ -140,6 +160,21 @@ export default function App() {
             >
               {isSwapping ? "Swapping..." : "Swap Now"}
             </button>
+
+            <div className="flex justify-between gap-2 mt-2">
+              <button
+                onClick={() => addTokenToWallet(TOKEN_A)}
+                className="flex-1 text-sm bg-yellow-400 text-black py-1 rounded"
+              >
+                Add {TOKEN_A.name}
+              </button>
+              <button
+                onClick={() => addTokenToWallet(TOKEN_B)}
+                className="flex-1 text-sm bg-purple-400 text-white py-1 rounded"
+              >
+                Add {TOKEN_B.name}
+              </button>
+            </div>
           </>
         )}
       </div>

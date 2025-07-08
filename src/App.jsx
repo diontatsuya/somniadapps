@@ -7,7 +7,7 @@ function ConnectedApp() {
   const { wallets } = useWallets();
   const wallet = wallets[0];
 
-  if (!ready) return <div className="text-center mt-8">⏳ Memuat Privy...</div>;
+  if (!ready) return <div className="text-center mt-8">Loading Privy...</div>;
 
   if (!authenticated)
     return (
@@ -16,7 +16,7 @@ function ConnectedApp() {
           className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow"
           onClick={login}
         >
-          🔐 Login dengan Wallet
+          Connect Wallet
         </button>
       </div>
     );
@@ -42,9 +42,9 @@ export default function App() {
     <PrivyProvider
       appId="cmcn6y46j00mnl40m3u5bee9v"
       config={{
-        loginMethods: ["wallet"], // Fokus hanya login via wallet
+        loginMethods: ["wallet"],
         embeddedWallets: {
-          createOnLogin: "users-without-wallets", // Buat dompet embedded hanya jika tidak punya eksternal
+          createOnLogin: "users-without-wallets",
         },
       }}
     >

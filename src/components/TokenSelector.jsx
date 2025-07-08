@@ -1,41 +1,24 @@
-import React from "react";
+import tokenLogos from "../assets/tokenLogos";
 
 export default function TokenSelector({ label, token, onChange }) {
-  const options = [
-    {
-      name: "STT",
-      address: "0x0000000000000000000000000000000000000000", // ganti dengan alamat STT sebenarnya jika perlu
-      icon: "/stt.png",
-    },
-    {
-      name: "GOLD",
-      address: "0x7e86277abbedac497e23d7abf43913833fb7ba2e",
-      icon: "/gold.png",
-    },
-    {
-      name: "GEM",
-      address: "0x73f75ac5400f48bad2bff033eae4248cfef9b499",
-      icon: "/gem.png",
-    },
-  ];
-
   return (
-    <div className="flex flex-col">
-      <label className="text-sm font-semibold mb-1">{label}</label>
+    <div className="flex items-center gap-2">
+      <span className="text-sm w-10">{label}:</span>
       <select
-        className="border p-2 rounded"
+        className="flex-1 border p-2 rounded"
         value={token.address}
         onChange={(e) => {
-          const selected = options.find((opt) => opt.address === e.target.value);
+          const selected = Object.values(tokenLogos).find(t => t.address === e.target.value);
           onChange(selected);
         }}
       >
-        {options.map((opt) => (
-          <option key={opt.address} value={opt.address}>
-            {opt.name}
+        {Object.values(tokenLogos).map((t) => (
+          <option key={t.address} value={t.address}>
+            {t.name}
           </option>
         ))}
       </select>
+      <img src={token.icon} alt={token.name} className="w-6 h-6" />
     </div>
   );
 }

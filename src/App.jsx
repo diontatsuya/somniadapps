@@ -12,6 +12,9 @@ export default function App() {
   const [tokenIn, setTokenIn] = useState(TOKEN_A);
   const [tokenOut, setTokenOut] = useState(TOKEN_B);
   const [isSwapping, setIsSwapping] = useState(false);
+  const [txHash, setTxHash] = useState("");
+  const [balanceA, setBalanceA] = useState("0");
+  const [balanceB, setBalanceB] = useState("0");
 
   const connectWallet = async () => {
     if (window.ethereum) {
@@ -21,6 +24,8 @@ export default function App() {
       setProvider(prov);
       setSigner(signer);
       setWallet(addr);
+    } else {
+      alert("🦊 MetaMask tidak ditemukan. Silakan pasang MetaMask.");
     }
   };
 
@@ -28,16 +33,21 @@ export default function App() {
     setWallet(null);
     setProvider(null);
     setSigner(null);
+    setAmount("");
+    setEstimate("");
+    setTxHash("");
   };
 
   const switchTokens = () => {
     setTokenIn(tokenOut);
     setTokenOut(tokenIn);
     setEstimate("");
+    setAmount("");
+    setTxHash("");
   };
 
   const getEstimate = async () => {
-    if (!signer || !amount) return;
+    if (!signer || !amount || Number(amount) <= 0) return;
     try {
       const contract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, provider);
       const raw = ethers.parseUnits(amount, 18);
@@ -64,20 +74,48 @@ export default function App() {
     }
   };
 
+  const getBalance = async () => {
+    if (!wallet || !provider) return;
+    try {
+      const erc20Abi = ["function balanceOf(address owner) view returns (uint256)"];
+      const tokenA = new ethers.Contract(TOKEN_A.address, erc20Abi, provider);
+      const tokenB = new ethers.Contract(TOKEN_B.address, erc20Abi, provider);
+      const [balA, balB] = await Promise.all([
+        tokenA.balanceOf(wallet),
+        tokenB.balanceOf(wallet)
+      ]);
+      setBalanceA(ethers.formatUnits(balA, 18));
+      setBalanceB(ethers.formatUnits(balB, 18));
+    } catch (err) {
+      console.error("Balance fetch failed:", err);
+    }
+  };
+
   const swap = async () => {
-    if (!signer || !amount) return;
+    if (!wallet || !signer) {
+      alert("❗ Wallet belum terkoneksi.");
+      return;
+    }
+    if (!amount || Number(amount) <= 0) {
+      alert("❗ Masukkan jumlah token yang valid.");
+      return;
+    }
+
     setIsSwapping(true);
+    setTxHash("");
     try {
       await approveIfNeeded();
       const contract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
       const tx = await contract.swap(tokenIn.address, tokenOut.address, ethers.parseUnits(amount, 18));
+      setTxHash(tx.hash);
       await tx.wait();
-      alert("✅ Swap success!");
+      alert("✅ Swap berhasil!");
       setAmount("");
       setEstimate("");
+      getBalance();
     } catch (err) {
-      console.error("Swap failed:", err);
-      alert("❌ Swap failed.");
+      console.error("Swap error:", err);
+      alert("❌ Swap gagal: " + (err.reason || err.message || "Terjadi kesalahan"));
     } finally {
       setIsSwapping(false);
     }
@@ -105,12 +143,13 @@ export default function App() {
 
   useEffect(() => {
     getEstimate();
-  }, [amount, tokenIn, tokenOut]);
+    getBalance();
+  }, [amount, tokenIn, tokenOut, wallet]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-300 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-        <h1 className="text-xl font-bold text-center">🔁 Universal Swap DApp</h1>
+        <h1 className="text-xl font-bold text-center">💱 Universal Swap DApp</h1>
 
         {!wallet ? (
           <button onClick={connectWallet} className="bg-blue-500 text-white w-full py-2 rounded">
@@ -119,12 +158,14 @@ export default function App() {
         ) : (
           <>
             <div className="text-xs text-gray-500 truncate">Wallet: {wallet}</div>
+            <div className="text-sm text-gray-600">
+              💰 {TOKEN_A.name}: {balanceA} | {TOKEN_B.name}: {balanceB}
+            </div>
             <button onClick={disconnect} className="bg-red-500 text-white w-full py-1 rounded mt-1">
               Log Out
             </button>
 
             <div className="space-y-2">
-              {/* Input Token */}
               <div className="flex items-center gap-2">
                 <img src={tokenIn.icon} alt={tokenIn.name} className="w-6 h-6" />
                 <input
@@ -137,10 +178,9 @@ export default function App() {
               </div>
 
               <button onClick={switchTokens} className="w-full text-center text-gray-600">
-                ⬇️ Switch ⬆️
+                🔁 Switch
               </button>
 
-              {/* Output Token */}
               <div className="flex items-center gap-2">
                 <img src={tokenOut.icon} alt={tokenOut.name} className="w-6 h-6" />
                 <input
@@ -161,7 +201,13 @@ export default function App() {
               {isSwapping ? "Swapping..." : "Swap Now"}
             </button>
 
-            <div className="flex justify-between gap-2 mt-2">
+            {txHash && (
+              <div className="text-xs text-center mt-2 text-blue-600">
+                TX: <a href={`https://shannon-explorer.somnia.network/tx/${txHash}`} target="_blank" rel="noopener noreferrer">{txHash.slice(0, 10)}...</a>
+              </div>
+            )}
+
+            <div className="flex justify-between gap-2 mt-3">
               <button
                 onClick={() => addTokenToWallet(TOKEN_A)}
                 className="flex-1 text-sm bg-yellow-400 text-black py-1 rounded"
@@ -170,7 +216,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => addTokenToWallet(TOKEN_B)}
-                className="flex-1 text-sm bg-purple-400 text-white py-1 rounded"
+                className="flex-1 text-sm bg-purple-500 text-white py-1 rounded"
               >
                 Add {TOKEN_B.name}
               </button>
@@ -180,4 +226,4 @@ export default function App() {
       </div>
     </div>
   );
-}
+                }

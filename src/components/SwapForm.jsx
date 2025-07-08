@@ -4,7 +4,6 @@ import { universalTokenSwapAbi } from "../abi/universalTokenSwapAbi";
 import { SWAP_CONTRACT, TOKEN_A, TOKEN_B } from "../constants/addresses";
 import TokenSelector from "./TokenSelector";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 export default function SwapForm({ provider }) {
   const [fromToken, setFromToken] = useState(TOKEN_A);
@@ -67,8 +66,8 @@ export default function SwapForm({ provider }) {
   };
 
   return (
-    <Card className="max-w-md mx-auto mt-6 p-4 border rounded-2xl shadow-md">
-      <CardContent className="flex flex-col space-y-4">
+    <div className="max-w-md mx-auto mt-6 p-4 border rounded-2xl shadow-md bg-white dark:bg-gray-900">
+      <div className="flex flex-col space-y-4">
         <h2 className="text-xl font-bold text-center">🌀 Token Swap</h2>
 
         <TokenSelector label="Dari" token={fromToken} onChange={setFromToken} />
@@ -115,7 +114,7 @@ export default function SwapForm({ provider }) {
         )}
 
         {error && <div className="text-sm text-red-600">❌ {error}</div>}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

@@ -1,52 +1,30 @@
-import React from "react";
+// src/components/TokenSelector.jsx
+import { TOKENS } from "../constants/addresses";
 
 export default function TokenSelector({ label, token, onChange }) {
-  const handleChange = (e) => {
-    const selected = tokens.find((t) => t.symbol === e.target.value);
-    if (selected) {
-      onChange(selected);
-    }
-  };
-
   return (
-    <div className="flex flex-col">
-      <label className="mb-1 font-medium">{label}</label>
-      <div className="flex items-center space-x-2 border rounded p-2">
+    <div>
+      <label className="block mb-1 font-medium">{label}</label>
+      <select
+        value={token.address}
+        onChange={(e) => {
+          const selected = TOKENS.find((t) => t.address === e.target.value);
+          onChange(selected);
+        }}
+        className="w-full border p-2 rounded"
+      >
+        {TOKENS.map((t) => (
+          <option key={t.address} value={t.address}>
+            {t.symbol} - {t.name}
+          </option>
+        ))}
+      </select>
+      <div className="mt-2 flex items-center space-x-2">
         <img src={token.icon} alt={token.symbol} className="w-6 h-6" />
-        <select
-          value={token.symbol}
-          onChange={handleChange}
-          className="flex-1 bg-transparent outline-none"
-        >
-          {tokens.map((t) => (
-            <option key={t.symbol} value={t.symbol}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+        <span className="text-sm text-gray-700">
+          {token.name} ({token.symbol})
+        </span>
       </div>
     </div>
   );
 }
-
-// Token options
-const tokens = [
-  {
-    symbol: "GOLD",
-    name: "Gold Token",
-    address: import.meta.env.VITE_TOKEN_GOLD,
-    icon: "/gold.png",
-  },
-  {
-    symbol: "GEM",
-    name: "Gem Token",
-    address: import.meta.env.VITE_TOKEN_GEM,
-    icon: "/gem.png",
-  },
-  {
-    symbol: "STT",
-    name: "Somnia Test Token",
-    address: import.meta.env.VITE_TOKEN_STT,
-    icon: "/stt.png",
-  },
-];

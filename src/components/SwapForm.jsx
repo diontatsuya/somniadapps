@@ -2,14 +2,14 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { universalTokenSwapAbi } from "../abi/universalTokenSwapAbi";
-import { SWAP_CONTRACT, TOKENS } from "../constants/addresses";
+import { SWAP_CONTRACT, TOKEN_A, TOKEN_B } from "../constants/addresses";
 import TokenSelector from "./TokenSelector";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 export default function SwapForm({ provider }) {
-  const [fromToken, setFromToken] = useState(TOKENS[0]);
-  const [toToken, setToToken] = useState(TOKENS[1]);
+  const [fromToken, setFromToken] = useState(TOKEN_A);
+  const [toToken, setToToken] = useState(TOKEN_B);
   const [amount, setAmount] = useState("");
   const [estimate, setEstimate] = useState(null);
   const [txHash, setTxHash] = useState(null);
@@ -39,7 +39,7 @@ export default function SwapForm({ provider }) {
       await tx.wait();
       setTxHash(tx.hash);
     } catch (err) {
-      setError(err.reason || err.message || "Swap gagal.");
+      setError(err.reason || err.message || "Swap failed.");
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export default function SwapForm({ provider }) {
 
   return (
     <Card className="max-w-md mx-auto mt-6 p-4 border rounded-2xl shadow-md">
-      <CardContent className="flex flex-col space-y-4">
+      <div className="flex flex-col space-y-4">
         <h2 className="text-xl font-bold text-center">🌀 Token Swap</h2>
 
         <TokenSelector label="Dari" token={fromToken} onChange={setFromToken} />
@@ -97,7 +97,7 @@ export default function SwapForm({ provider }) {
 
         {estimate && (
           <div className="text-sm text-green-600">
-            💱 Estimasi hasil: {estimate} {toToken.symbol}
+            💱 Estimasi hasil: {estimate} {toToken.name}
           </div>
         )}
 
@@ -116,7 +116,7 @@ export default function SwapForm({ provider }) {
         )}
 
         {error && <div className="text-sm text-red-600">❌ {error}</div>}
-      </CardContent>
+      </div>
     </Card>
   );
 }

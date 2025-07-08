@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export default function SwapForm({ provider }) {
-  const [fromToken, setFromToken] = useState(TOKENS[0]); // default: STT
-  const [toToken, setToToken] = useState(TOKENS[1]);     // default: GOLD
+  const [fromToken, setFromToken] = useState(TOKENS[0]);
+  const [toToken, setToToken] = useState(TOKENS[1]);
   const [amount, setAmount] = useState("");
   const [estimate, setEstimate] = useState(null);
   const [txHash, setTxHash] = useState(null);
@@ -96,7 +96,7 @@ export default function SwapForm({ provider }) {
 
         {estimate && (
           <div className="text-sm text-green-600">
-            💱 Estimasi hasil: {estimate} {toToken.symbol}
+            💱 Estimasi hasil: {estimate} {toToken.name}
           </div>
         )}
 

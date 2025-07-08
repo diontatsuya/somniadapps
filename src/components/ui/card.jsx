@@ -1,14 +1,8 @@
-import { cn } from "@/lib/utils";
+// src/components/ui/card.jsx
 
-export function Card({ className, children, ...props }) {
+export function Card({ className = "", children }) {
   return (
-    <div
-      className={cn(
-        "bg-white rounded-2xl shadow-md p-4 border border-gray-200 dark:bg-gray-900 dark:border-gray-700",
-        className
-      )}
-      {...props}
-    >
+    <div className={`bg-white border border-gray-200 rounded-2xl shadow p-4 ${className}`}>
       {children}
     </div>
   );

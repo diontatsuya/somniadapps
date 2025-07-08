@@ -1,15 +1,14 @@
-// src/components/SwapForm.jsx
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { universalTokenSwapAbi } from "../abi/universalTokenSwapAbi";
-import { SWAP_CONTRACT, TOKEN_A, TOKEN_B } from "../constants/addresses";
+import { SWAP_CONTRACT, TOKENS } from "../constants/addresses";
 import TokenSelector from "./TokenSelector";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export default function SwapForm({ provider }) {
-  const [fromToken, setFromToken] = useState(TOKEN_A);
-  const [toToken, setToToken] = useState(TOKEN_B);
+  const [fromToken, setFromToken] = useState(TOKENS[0]); // default: STT
+  const [toToken, setToToken] = useState(TOKENS[1]);     // default: GOLD
   const [amount, setAmount] = useState("");
   const [estimate, setEstimate] = useState(null);
   const [txHash, setTxHash] = useState(null);
@@ -55,7 +54,7 @@ export default function SwapForm({ provider }) {
       const estimated = await contract.estimateSwap(fromToken.address, toToken.address, amountInWei);
       setEstimate(ethers.utils.formatEther(estimated));
     } catch (err) {
-      setError("Estimasi gagal. Pastikan jaringan terhubung dan input valid.");
+      setError("❌ Estimasi gagal. Pastikan jaringan terhubung dan input valid.");
     }
   };
 
@@ -97,7 +96,7 @@ export default function SwapForm({ provider }) {
 
         {estimate && (
           <div className="text-sm text-green-600">
-            💱 Estimasi hasil: {estimate} {toToken.name}
+            💱 Estimasi hasil: {estimate} {toToken.symbol}
           </div>
         )}
 
@@ -115,7 +114,7 @@ export default function SwapForm({ provider }) {
           </div>
         )}
 
-        {error && <div className="text-sm text-red-600">❌ {error}</div>}
+        {error && <div className="text-sm text-red-600">{error}</div>}
       </div>
     </Card>
   );

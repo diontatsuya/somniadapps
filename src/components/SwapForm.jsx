@@ -1,102 +1,111 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import { SWAP_CONTRACT, TOKENS } from "../constants/addresses";
+import { universalTokenSwapAbi } from "../abi/universalTokenSwapAbi";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { SWAP_CONTRACT, TOKEN_LIST } from "@/constants/addresses";
-import { universalTokenSwapAbi } from "@/abi/universalTokenSwapAbi";
+import TokenSelector from "./TokenSelector";
+import SwapButton from "./SwapButton";
 
-export default function SwapForm({ provider, wallet }) {
-  const [fromToken, setFromToken] = useState(TOKEN_LIST[0]);
-  const [toToken, setToToken] = useState(TOKEN_LIST[1]);
+export default function SwapForm({ wallet, provider }) {
+  const [fromToken, setFromToken] = useState(TOKENS[0]);
+  const [toToken, setToToken] = useState(TOKENS[1]);
   const [amount, setAmount] = useState("");
-  const [estimated, setEstimated] = useState("0");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [estimatedAmount, setEstimatedAmount] = useState("0");
+  const [status, setStatus] = useState("");
+  const [txHash, setTxHash] = useState(null);
 
-  const estimateSwap = async () => {
-    if (!provider || !wallet || !amount || fromToken.address === toToken.address) return;
-    setError("");
-    try {
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
-      const est = await contract.estimateSwap(fromToken.address, toToken.address, ethers.parseUnits(amount, 18));
-      setEstimated(ethers.formatUnits(est, 18));
-    } catch (err) {
-      setError("Estimasi gagal. Pastikan kontrak swap memiliki fungsi estimateSwap dan token cukup tersedia.");
-    }
-  };
-
-  const handleSwap = async () => {
-    if (!provider || !wallet || !amount || fromToken.address === toToken.address) return;
-    setLoading(true);
-    setError("");
-    try {
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
-      const tx = await contract.swap(
-        fromToken.address,
-        toToken.address,
-        ethers.parseUnits(amount, 18)
-      );
-      await tx.wait();
-      setAmount("");
-      setEstimated("0");
-    } catch (err) {
-      setError("Swap gagal. Pastikan allowance dan saldo mencukupi.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const signer = provider ? await provider.getSigner() : null;
+  const swapContract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
 
   useEffect(() => {
-    estimateSwap();
+    if (amount && ethers.isAddress(fromToken.address) && ethers.isAddress(toToken.address)) {
+      estimate();
+    }
   }, [amount, fromToken, toToken]);
 
+  async function estimate() {
+    try {
+      const amt = ethers.parseUnits(amount || "0", 18);
+      const result = await swapContract.estimateSwap(fromToken.address, toToken.address, amt);
+      setEstimatedAmount(ethers.formatUnits(result, 18));
+    } catch (err) {
+      console.error("Estimate failed", err);
+      setEstimatedAmount("0");
+    }
+  }
+
+  async function checkAndApprove() {
+    const tokenContract = new ethers.Contract(fromToken.address, [
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function approve(address spender, uint256 amount) returns (bool)"
+    ], signer);
+
+    const allowance = await tokenContract.allowance(wallet, SWAP_CONTRACT);
+    const amt = ethers.parseUnits(amount, 18);
+
+    if (allowance < amt) {
+      const tx = await tokenContract.approve(SWAP_CONTRACT, ethers.MaxUint256);
+      await tx.wait();
+    }
+  }
+
+  async function handleSwap() {
+    try {
+      setStatus("Approving...");
+      await checkAndApprove();
+
+      setStatus("Swapping...");
+      const amt = ethers.parseUnits(amount, 18);
+      const tx = await swapContract.swap(fromToken.address, toToken.address, amt);
+      setTxHash(tx.hash);
+      await tx.wait();
+      setStatus("✅ Swap successful");
+    } catch (err) {
+      setStatus(`❌ Swap failed: ${err.message}`);
+    }
+  }
+
   return (
-    <Card className="w-full shadow-xl">
-      <CardContent className="p-4 space-y-4">
-        <div className="text-center text-lg font-semibold">💱 Token Swap</div>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <TokenSelector selected={fromToken} onChange={setFromToken} />
+        <span>→</span>
+        <TokenSelector selected={toToken} onChange={setToToken} />
+      </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">From Token</label>
-          <select
-            className="w-full border rounded px-2 py-1"
-            value={fromToken.address}
-            onChange={(e) => setFromToken(TOKEN_LIST.find(t => t.address === e.target.value))}
-          >
-            {TOKEN_LIST.map((token) => (
-              <option key={token.address} value={token.address}>{token.name}</option>
-            ))}
-          </select>
+      <input
+        type="number"
+        placeholder={`Amount in ${fromToken.name}`}
+        className="w-full border rounded px-2 py-1"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+      />
 
-          <label className="text-sm font-medium">To Token</label>
-          <select
-            className="w-full border rounded px-2 py-1"
-            value={toToken.address}
-            onChange={(e) => setToToken(TOKEN_LIST.find(t => t.address === e.target.value))}
-          >
-            {TOKEN_LIST.map((token) => (
-              <option key={token.address} value={token.address}>{token.name}</option>
-            ))}
-          </select>
+      <div className="text-sm text-gray-500">
+        Estimated: {estimatedAmount} {toToken.name}
+      </div>
 
-          <input
-            type="number"
-            placeholder="Amount"
-            className="w-full border rounded px-2 py-1"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+      <SwapButton onClick={handleSwap} disabled={!amount || !wallet}>
+        Swap
+      </SwapButton>
 
-          <div className="text-sm">Estimated: {estimated} {toToken.name}</div>
-
-          {error && <div className="text-sm text-red-600">{error}</div>}
-
-          <Button onClick={handleSwap} disabled={loading || !amount || fromToken.address === toToken.address} className="w-full">
-            {loading ? "Swapping..." : "Swap"}
-          </Button>
+      {status && (
+        <div className="text-sm text-center mt-2 text-blue-600">
+          {status}
+          {txHash && (
+            <div>
+              <a
+                href={`https://shannon-explorer.somnia.network/tx/${txHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="underline text-sm"
+              >
+                View on Explorer
+              </a>
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
-          }
+}

@@ -18,7 +18,7 @@ export const TOKENS = [
   {
     name: "Somnia Test Token",
     symbol: "STT",
-    address: "0x841b9fcB0c9E19Ba7eE387E9F011fe79D860d73A",
+    address: "0x7f89af8b3c0A68F536Ff20433927F4573CF001A3", // alamat STT resmi
     icon: "/stt.png",
-  }
+  },
 ];

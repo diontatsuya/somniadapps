@@ -96,7 +96,7 @@ export default function SwapForm({ provider }) {
 
         {estimate && (
           <div className="text-sm text-green-600">
-            💱 Estimasi hasil: {estimate} {toToken.name}
+            💱 Estimasi hasil: {estimate} {toToken.symbol}
           </div>
         )}
 

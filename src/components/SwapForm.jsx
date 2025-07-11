@@ -109,8 +109,18 @@ export default function SwapForm({ provider }) {
       <div className="flex flex-col space-y-4">
         <h2 className="text-xl font-bold text-center">🌀 Token Swap</h2>
 
-        <TokenSelector label="Dari" token={fromToken} onChange={setFromToken} />
-        <TokenSelector label="Ke" token={toToken} onChange={setToToken} />
+        <TokenSelector
+          label="Dari"
+          token={fromToken}
+          onChange={setFromToken}
+          otherToken={toToken}
+        />
+        <TokenSelector
+          label="Ke"
+          token={toToken}
+          onChange={setToToken}
+          otherToken={fromToken}
+        />
 
         <input
           className="border p-2 rounded"
@@ -163,4 +173,4 @@ export default function SwapForm({ provider }) {
       </div>
     </Card>
   );
-}
+          }

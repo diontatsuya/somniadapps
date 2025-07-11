@@ -29,21 +29,27 @@ export default function SwapForm({ provider }) {
     getSigner();
   }, [provider]);
 
-  // Ambil saldo saat token fromToken berubah
   useEffect(() => {
     const fetchBalance = async () => {
-      if (signer && fromToken?.address) {
-        try {
-          const userAddress = await signer.getAddress();
+      if (!signer || !fromToken) return;
+
+      try {
+        const userAddress = await signer.getAddress();
+
+        if (fromToken.symbol === "STT") {
+          const rawBal = await provider.getBalance(userAddress);
+          setBalance(formatEther(rawBal));
+        } else {
           const erc20 = new Contract(fromToken.address, erc20Abi, signer);
           const bal = await erc20.balanceOf(userAddress);
           setBalance(formatEther(bal));
-        } catch (err) {
-          console.error("Gagal ambil saldo:", err);
-          setBalance("0");
         }
+      } catch (err) {
+        console.error("Gagal ambil saldo:", err);
+        setBalance("0");
       }
     };
+
     fetchBalance();
   }, [signer, fromToken]);
 
@@ -74,7 +80,7 @@ export default function SwapForm({ provider }) {
       setLoading(true);
       const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
 
-      const isNative = fromToken.symbol === "STT"; // pengecualian STT
+      const isNative = fromToken.symbol === "STT";
 
       if (!isNative) {
         const erc20 = new Contract(fromToken.address, erc20Abi, signer);

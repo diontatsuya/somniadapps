@@ -11,6 +11,7 @@ export default function SwapForm({ provider }) {
   const [fromToken, setFromToken] = useState(TOKENS[0]);
   const [toToken, setToToken] = useState(TOKENS[1]);
   const [amount, setAmount] = useState("");
+  const [balance, setBalance] = useState("0");
   const [estimate, setEstimate] = useState(null);
   const [txHash, setTxHash] = useState(null);
   const [signer, setSigner] = useState(null);
@@ -28,6 +29,24 @@ export default function SwapForm({ provider }) {
     getSigner();
   }, [provider]);
 
+  // Ambil saldo saat token fromToken berubah
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (signer && fromToken?.address) {
+        try {
+          const userAddress = await signer.getAddress();
+          const erc20 = new Contract(fromToken.address, erc20Abi, signer);
+          const bal = await erc20.balanceOf(userAddress);
+          setBalance(formatEther(bal));
+        } catch (err) {
+          console.error("Gagal ambil saldo:", err);
+          setBalance("0");
+        }
+      }
+    };
+    fetchBalance();
+  }, [signer, fromToken]);
+
   const handleSwap = async () => {
     try {
       setError("");
@@ -43,18 +62,29 @@ export default function SwapForm({ provider }) {
         return;
       }
 
-      setLoading(true);
       const amountInWei = parseEther(amount);
       const userAddress = await signer.getAddress();
+      const userBalance = parseEther(balance);
+
+      if (amountInWei > userBalance) {
+        setError("❌ Jumlah melebihi saldo.");
+        return;
+      }
+
+      setLoading(true);
       const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
 
-      const erc20 = new Contract(fromToken.address, erc20Abi, signer);
-      const allowance = await erc20.allowance(userAddress, SWAP_CONTRACT);
-      if (allowance < amountInWei) {
-        setApproving(true);
-        const approveTx = await erc20.approve(SWAP_CONTRACT, amountInWei);
-        await approveTx.wait();
-        setApproving(false);
+      const isNative = fromToken.symbol === "STT"; // pengecualian STT
+
+      if (!isNative) {
+        const erc20 = new Contract(fromToken.address, erc20Abi, signer);
+        const allowance = await erc20.allowance(userAddress, SWAP_CONTRACT);
+        if (allowance < amountInWei) {
+          setApproving(true);
+          const approveTx = await erc20.approve(SWAP_CONTRACT, amountInWei);
+          await approveTx.wait();
+          setApproving(false);
+        }
       }
 
       const tx = await contract.swap(fromToken.address, toToken.address, amountInWei);
@@ -109,18 +139,12 @@ export default function SwapForm({ provider }) {
       <div className="flex flex-col space-y-4">
         <h2 className="text-xl font-bold text-center">🌀 Token Swap</h2>
 
-        <TokenSelector
-          label="Dari"
-          token={fromToken}
-          onChange={setFromToken}
-          otherToken={toToken}
-        />
-        <TokenSelector
-          label="Ke"
-          token={toToken}
-          onChange={setToToken}
-          otherToken={fromToken}
-        />
+        <TokenSelector label="Dari" token={fromToken} onChange={setFromToken} />
+        <TokenSelector label="Ke" token={toToken} onChange={setToToken} />
+
+        <div className="text-xs text-gray-600">
+          Saldo: {balance} {fromToken.symbol}
+        </div>
 
         <input
           className="border p-2 rounded"
@@ -173,4 +197,4 @@ export default function SwapForm({ provider }) {
       </div>
     </Card>
   );
-          }
+}

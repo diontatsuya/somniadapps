@@ -48,7 +48,6 @@ export default function SwapForm({ provider }) {
       const userAddress = await signer.getAddress();
       const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
 
-      // ✅ Approve jika perlu
       const erc20 = new Contract(fromToken.address, erc20Abi, signer);
       const allowance = await erc20.allowance(userAddress, SWAP_CONTRACT);
       if (allowance < amountInWei) {
@@ -58,7 +57,6 @@ export default function SwapForm({ provider }) {
         setApproving(false);
       }
 
-      // ✅ Lakukan swap
       const tx = await contract.swap(fromToken.address, toToken.address, amountInWei);
       await tx.wait();
       setTxHash(tx.hash);
@@ -165,4 +163,4 @@ export default function SwapForm({ provider }) {
       </div>
     </Card>
   );
-    }
+}

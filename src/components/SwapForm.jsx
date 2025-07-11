@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Contract, parseEther, formatEther } from "ethers";
 import { universalTokenSwapAbi } from "../abi/universalTokenSwapAbi";
+import { erc20Abi } from "../abi/erc20Abi"; // pastikan file ini ada
 import { SWAP_CONTRACT, TOKENS } from "../constants/addresses";
 import TokenSelector from "./TokenSelector";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export default function SwapForm({ provider }) {
   const [signer, setSigner] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   useEffect(() => {
     const getSigner = async () => {
@@ -30,11 +32,35 @@ export default function SwapForm({ provider }) {
     try {
       setError("");
       setTxHash(null);
+
+      if (fromToken.address === toToken.address) {
+        setError("❌ Tidak bisa swap token yang sama.");
+        return;
+      }
+
+      if (!amount || Number(amount) <= 0) {
+        setError("❌ Masukkan jumlah token yang valid.");
+        return;
+      }
+
       setLoading(true);
 
-      const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
       const amountInWei = parseEther(amount);
+      const userAddress = await signer.getAddress();
 
+      // ✅ Cek allowance
+      const erc20 = new Contract(fromToken.address, erc20Abi, signer);
+      const allowance = await erc20.allowance(userAddress, SWAP_CONTRACT);
+
+      if (allowance < amountInWei) {
+        setApproving(true);
+        const approveTx = await erc20.approve(SWAP_CONTRACT, amountInWei);
+        await approveTx.wait();
+        setApproving(false);
+      }
+
+      // ✅ Eksekusi swap
+      const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
       const tx = await contract.swap(fromToken.address, toToken.address, amountInWei);
       await tx.wait();
 
@@ -43,9 +69,10 @@ export default function SwapForm({ provider }) {
       setEstimate(null);
     } catch (err) {
       console.error("Swap failed:", err);
-      setError(err.reason || err.message || "Swap failed.");
+      setError(err.reason || err.message || "Swap gagal.");
     } finally {
       setLoading(false);
+      setApproving(false);
     }
   };
 
@@ -54,13 +81,23 @@ export default function SwapForm({ provider }) {
       setError("");
       setEstimate(null);
 
+      if (fromToken.address === toToken.address) {
+        setError("❌ Tidak bisa estimasi token yang sama.");
+        return;
+      }
+
+      if (!amount || Number(amount) <= 0) {
+        setError("❌ Masukkan jumlah token yang valid.");
+        return;
+      }
+
       const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
       const amountInWei = parseEther(amount);
       const estimated = await contract.estimateSwap(fromToken.address, toToken.address, amountInWei);
       setEstimate(formatEther(estimated));
     } catch (err) {
       console.error("Estimate failed:", err);
-      setError("❌ Estimasi gagal. Pastikan jaringan terhubung dan input valid.");
+      setError("❌ Estimasi gagal. Pastikan jaringan dan input valid.");
     }
   };
 
@@ -95,8 +132,15 @@ export default function SwapForm({ provider }) {
           <Button onClick={handleSwitch} variant="outline">
             🔁 Tukar
           </Button>
-          <Button onClick={handleSwap} disabled={!signer || !amount || loading}>
-            {loading ? "⏳ Swapping..." : "Swap"}
+          <Button
+            onClick={handleSwap}
+            disabled={!signer || !amount || loading || approving}
+          >
+            {approving
+              ? "🔒 Approving..."
+              : loading
+              ? "⏳ Swapping..."
+              : "Swap"}
           </Button>
         </div>
 

@@ -1,4 +1,3 @@
-// src/constants/addresses.js
 export const SWAP_CONTRACT = "0x63a04beb918655679123c2dc1f43d142da5c7fea";
 
 export const TOKENS = [

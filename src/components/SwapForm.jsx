@@ -44,14 +44,25 @@ export default function SwapForm({ provider }) {
       }
 
       setLoading(true);
-
       const amountInWei = parseEther(amount);
       const userAddress = await signer.getAddress();
+      const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
 
-      // ✅ Cek allowance
+      // ✅ Jika STT → token lain
+      if (fromToken.symbol === "STT") {
+        const tx = await contract.swapNativeToToken(toToken.address, {
+          value: amountInWei,
+        });
+        await tx.wait();
+        setTxHash(tx.hash);
+        setAmount("");
+        setEstimate(null);
+        return;
+      }
+
+      // ✅ ERC20 → ERC20 (GOLD ↔ GEM)
       const erc20 = new Contract(fromToken.address, erc20Abi, signer);
       const allowance = await erc20.allowance(userAddress, SWAP_CONTRACT);
-
       if (allowance < amountInWei) {
         setApproving(true);
         const approveTx = await erc20.approve(SWAP_CONTRACT, amountInWei);
@@ -59,11 +70,8 @@ export default function SwapForm({ provider }) {
         setApproving(false);
       }
 
-      // ✅ Eksekusi swap
-      const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
       const tx = await contract.swap(fromToken.address, toToken.address, amountInWei);
       await tx.wait();
-
       setTxHash(tx.hash);
       setAmount("");
       setEstimate(null);
@@ -168,4 +176,4 @@ export default function SwapForm({ provider }) {
       </div>
     </Card>
   );
-}
+    }

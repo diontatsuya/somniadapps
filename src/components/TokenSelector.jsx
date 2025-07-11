@@ -1,6 +1,6 @@
 import { TOKENS } from "../constants/addresses";
 
-export default function TokenSelector({ label, token, onChange }) {
+export default function TokenSelector({ label, token, onChange, otherToken }) {
   return (
     <div className="z-10 relative">
       <label className="block mb-1 font-medium text-sm text-gray-700">{label}</label>
@@ -9,15 +9,18 @@ export default function TokenSelector({ label, token, onChange }) {
         value={token.address}
         onChange={(e) => {
           const selected = TOKENS.find((t) => t.address === e.target.value);
-          if (selected) {
+          if (selected && selected.address !== otherToken?.address) {
             onChange(selected);
-            console.log("✅ Token selected:", selected); // debug opsional
           }
         }}
         className="w-full border p-2 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         {TOKENS.map((t) => (
-          <option key={t.address} value={t.address}>
+          <option
+            key={t.address}
+            value={t.address}
+            disabled={t.address === otherToken?.address}
+          >
             {t.symbol} - {t.name}
           </option>
         ))}

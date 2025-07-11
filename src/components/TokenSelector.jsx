@@ -2,7 +2,7 @@ import { TOKENS } from "../constants/addresses";
 
 export default function TokenSelector({ label, token, onChange }) {
   return (
-    <div className="z-10 relative">
+    <div className="relative z-50">
       <label className="block mb-1 font-medium">{label}</label>
       <select
         value={token.address}
@@ -10,7 +10,7 @@ export default function TokenSelector({ label, token, onChange }) {
           const selected = TOKENS.find((t) => t.address === e.target.value);
           onChange(selected);
         }}
-        className="w-full border p-2 rounded bg-white text-black"
+        className="w-full border p-2 rounded bg-white text-black appearance-auto focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         {TOKENS.map((t) => (
           <option key={t.address} value={t.address}>

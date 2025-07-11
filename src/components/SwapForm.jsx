@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ethers } from "ethers";
+import { Contract, parseEther, formatEther } from "ethers";
 import { universalTokenSwapAbi } from "../abi/universalTokenSwapAbi";
 import { SWAP_CONTRACT, TOKENS } from "../constants/addresses";
 import TokenSelector from "./TokenSelector";
@@ -32,12 +32,17 @@ export default function SwapForm({ provider }) {
       setTxHash(null);
       setLoading(true);
 
-      const contract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
-      const amountInWei = ethers.utils.parseEther(amount);
+      const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
+      const amountInWei = parseEther(amount);
+
       const tx = await contract.swap(fromToken.address, toToken.address, amountInWei);
       await tx.wait();
+
       setTxHash(tx.hash);
+      setAmount("");
+      setEstimate(null);
     } catch (err) {
+      console.error("Swap failed:", err);
       setError(err.reason || err.message || "Swap failed.");
     } finally {
       setLoading(false);
@@ -49,11 +54,12 @@ export default function SwapForm({ provider }) {
       setError("");
       setEstimate(null);
 
-      const contract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
-      const amountInWei = ethers.utils.parseEther(amount);
+      const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
+      const amountInWei = parseEther(amount);
       const estimated = await contract.estimateSwap(fromToken.address, toToken.address, amountInWei);
-      setEstimate(ethers.utils.formatEther(estimated));
+      setEstimate(formatEther(estimated));
     } catch (err) {
+      console.error("Estimate failed:", err);
       setError("❌ Estimasi gagal. Pastikan jaringan terhubung dan input valid.");
     }
   };

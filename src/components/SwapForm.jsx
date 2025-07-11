@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Contract, parseEther, formatEther } from "ethers";
 import { universalTokenSwapAbi } from "../abi/universalTokenSwapAbi";
-import { erc20Abi } from "../abi/erc20Abi"; // pastikan file ini ada
+import { erc20Abi } from "../abi/erc20Abi";
 import { SWAP_CONTRACT, TOKENS } from "../constants/addresses";
 import TokenSelector from "./TokenSelector";
 import { Button } from "@/components/ui/button";
@@ -48,19 +48,7 @@ export default function SwapForm({ provider }) {
       const userAddress = await signer.getAddress();
       const contract = new Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
 
-      // ✅ Jika STT → token lain
-      if (fromToken.symbol === "STT") {
-        const tx = await contract.swapNativeToToken(toToken.address, {
-          value: amountInWei,
-        });
-        await tx.wait();
-        setTxHash(tx.hash);
-        setAmount("");
-        setEstimate(null);
-        return;
-      }
-
-      // ✅ ERC20 → ERC20 (GOLD ↔ GEM)
+      // ✅ Approve jika perlu
       const erc20 = new Contract(fromToken.address, erc20Abi, signer);
       const allowance = await erc20.allowance(userAddress, SWAP_CONTRACT);
       if (allowance < amountInWei) {
@@ -70,6 +58,7 @@ export default function SwapForm({ provider }) {
         setApproving(false);
       }
 
+      // ✅ Lakukan swap
       const tx = await contract.swap(fromToken.address, toToken.address, amountInWei);
       await tx.wait();
       setTxHash(tx.hash);

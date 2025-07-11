@@ -1,12 +1,11 @@
 // src/constants/addresses.js
-
 export const SWAP_CONTRACT = "0x63a04beb918655679123c2dc1f43d142da5c7fea";
 
 export const TOKENS = [
   {
     name: "Somnia Test Token",
     symbol: "STT",
-    address: "0x0000000000000000000000000000000000000000", // STT = native token
+    address: "0x7f89af8b3c0A68F536Ff20433927F4573CF001A3",
     icon: "/stt.png",
   },
   {

@@ -6,6 +6,12 @@ import TokenSelector from "./TokenSelector";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
+const erc20Abi = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function allowance(address owner, address spender) external view returns (uint256)",
+  "function balanceOf(address account) external view returns (uint256)",
+];
+
 export default function SwapForm({ provider }) {
   const [fromToken, setFromToken] = useState(TOKENS[0]);
   const [toToken, setToToken] = useState(TOKENS[1]);
@@ -13,17 +19,20 @@ export default function SwapForm({ provider }) {
   const [estimate, setEstimate] = useState(null);
   const [txHash, setTxHash] = useState(null);
   const [signer, setSigner] = useState(null);
+  const [userAddress, setUserAddress] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const getSigner = async () => {
+    const init = async () => {
       if (provider) {
         const _signer = await provider.getSigner();
+        const _addr = await _signer.getAddress();
         setSigner(_signer);
+        setUserAddress(_addr);
       }
     };
-    getSigner();
+    init();
   }, [provider]);
 
   const handleSwap = async () => {
@@ -35,6 +44,18 @@ export default function SwapForm({ provider }) {
       const contract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
       const amountInWei = ethers.parseEther(amount);
 
+      // Jika bukan STT (native), cek allowance & approve jika perlu
+      if (fromToken.symbol !== "STT") {
+        const tokenContract = new ethers.Contract(fromToken.address, erc20Abi, signer);
+        const allowance = await tokenContract.allowance(userAddress, SWAP_CONTRACT);
+
+        if (allowance < amountInWei) {
+          const approveTx = await tokenContract.approve(SWAP_CONTRACT, amountInWei);
+          await approveTx.wait();
+        }
+      }
+
+      // Lakukan swap
       const tx = await contract.swap(
         fromToken.address,
         toToken.address,
@@ -45,6 +66,7 @@ export default function SwapForm({ provider }) {
       await tx.wait();
       setTxHash(tx.hash);
     } catch (err) {
+      console.error(err);
       setError(err.reason || err.message || "Swap failed.");
     } finally {
       setLoading(false);
@@ -60,15 +82,14 @@ export default function SwapForm({ provider }) {
       const amountInWei = ethers.parseEther(amount);
       const estimated = await contract.estimateSwap(fromToken.address, toToken.address, amountInWei);
       setEstimate(ethers.formatEther(estimated));
-    } catch (err) {
-      setError("❌ Estimasi gagal. Pastikan jaringan terhubung dan input valid.");
+    } catch {
+      setError("❌ Estimasi gagal. Pastikan jaringan dan input valid.");
     }
   };
 
   const handleSwitch = () => {
-    const temp = fromToken;
     setFromToken(toToken);
-    setToToken(temp);
+    setToToken(fromToken);
     setEstimate(null);
     setTxHash(null);
   };

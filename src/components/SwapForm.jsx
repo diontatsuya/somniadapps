@@ -3,11 +3,10 @@ import { ethers } from "ethers";
 import { universalTokenSwapAbi } from "../abi/universalTokenSwapAbi";
 import { SWAP_CONTRACT, TOKENS } from "../constants/addresses";
 import TokenSelector from "./TokenSelector";
-import BalanceDisplay from "./BalanceDisplay";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-export default function SwapForm({ provider, address }) {
+export default function SwapForm({ provider }) {
   const [fromToken, setFromToken] = useState(TOKENS[0]);
   const [toToken, setToToken] = useState(TOKENS[1]);
   const [amount, setAmount] = useState("");
@@ -35,7 +34,14 @@ export default function SwapForm({ provider, address }) {
 
       const contract = new ethers.Contract(SWAP_CONTRACT, universalTokenSwapAbi, signer);
       const amountInWei = ethers.parseEther(amount);
-      const tx = await contract.swap(fromToken.address, toToken.address, amountInWei);
+
+      const tx = await contract.swap(
+        fromToken.address,
+        toToken.address,
+        amountInWei,
+        fromToken.symbol === "STT" ? { value: amountInWei } : {}
+      );
+
       await tx.wait();
       setTxHash(tx.hash);
     } catch (err) {
@@ -73,10 +79,7 @@ export default function SwapForm({ provider, address }) {
         <h2 className="text-xl font-bold text-center">🌀 Token Swap</h2>
 
         <TokenSelector label="Dari" token={fromToken} onChange={setFromToken} />
-        <BalanceDisplay token={fromToken} address={address} provider={provider} />
-
         <TokenSelector label="Ke" token={toToken} onChange={setToToken} />
-        <BalanceDisplay token={toToken} address={address} provider={provider} />
 
         <input
           className="border p-2 rounded"
